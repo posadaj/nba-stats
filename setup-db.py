@@ -12,9 +12,11 @@ Games DB schema:
 - away_score (in API scores.visitors.points)
 """
 import sys
+import os
 
 import json
 import requests
+from typing import List
 
 
 BASE_URL = "https://api-nba-v1.p.rapidapi.com/"
@@ -23,6 +25,10 @@ HEADERS = {
   'x-rapidapi-key': API_KEY,
   'x-rapidapi-host': 'api-nba-v1.p.rapidapi.com'
 }
+
+# 10 year window
+START_SEASON = 2014
+LAST_SEASON = 2023
 
 
 def setup_client(api_key: str) -> None:
@@ -40,8 +46,13 @@ def setup_client(api_key: str) -> None:
     print(HEADERS)
 
 
-def get_games_for_season(season: int) -> None:
-    """ Get games for season and save locally. """
+def get_games_for_season(season: int) -> str:
+    """
+    Get games for season and save locally.
+
+    Returns:
+      The file_name used to store the games for a single season.
+    """
     url = f"{BASE_URL}games?season={season}"
 
     print(f"Qualified URL: {url}")
@@ -63,8 +74,40 @@ def get_games_for_season(season: int) -> None:
         game['stage'] = raw_game['stage']
         games.append(game)
 
-    with open(f'db/games-{season}.json', 'w') as file_id:
+    file_name = f'db/games-{season}.json'
+    with open(file_name, 'a') as file_id:
         file_id.write(json.dumps(games))
+
+    return file_name
+
+
+def combine_games_across_seasons(filenames: List[str]):
+    """ Combine all JSON files for individual seasons into one file to represent games for desired window. """
+    all_games = []
+    for filename in filenames:
+        with open(filename, 'r') as file_id:
+            all_games.extend(json.loads(file_id.read()))
+
+    with open('db/games.json', 'a') as file_id:
+        file_id.write(json.dumps(all_games))
+
+
+def setup_games_tables() -> None:
+    """
+    Setup the games table by pulling NBA data and persisting a single json file. Exists early if data already fetched.
+    """
+    # Check if data is already pulled
+
+    file_path = os.getcwd() + '/db/games.json'
+    if os.path.exists(file_path):
+        print('Data already pulled for NBA games. Skipping setup.')
+        return
+
+    print("Pulling data for NBA games.")
+    files_for_seasons = []
+    for season in range(START_SEASON, LAST_SEASON+1):
+        files_for_seasons.append(get_games_for_season(season))
+    combine_games_across_seasons(files_for_seasons)
 
 
 def main():
@@ -83,8 +126,9 @@ def main():
 
     setup_client(api_key=sys.argv[1])
 
+    setup_games_tables()
 
-    get_games_for_season(2023)
+
 
 
 
