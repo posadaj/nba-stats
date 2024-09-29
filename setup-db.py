@@ -19,7 +19,7 @@ import requests
 from typing import List
 
 
-BASE_URL = "https://api-nba-v1.p.rapidapi.com/"
+BASE_URL = "https://api-nba-v1.p.rapidapi.com"
 API_KEY = "<KEY>"
 HEADERS = {
   'x-rapidapi-key': API_KEY,
@@ -29,6 +29,15 @@ HEADERS = {
 # 10 year window
 START_SEASON = 2014
 LAST_SEASON = 2023
+
+NBA_DIVISIONS = [
+    'Atlantic',
+    'Central',
+    'Southeast',
+    'Northwest',
+    'Pacific',
+    'Southwest'
+]
 
 
 def setup_client(api_key: str) -> None:
@@ -46,14 +55,47 @@ def setup_client(api_key: str) -> None:
     print(HEADERS)
 
 
+def get_teams() -> str:
+    """
+    Get teams for NBA league and persist locally in a JSON file.
+
+    Returns:
+      The file_name used to store the NBA teams.
+    """
+    url = f"{BASE_URL}/teams"
+
+    response = requests.request("GET", url, headers=HEADERS, data={})
+
+    teams = []
+    for raw_team in response.json()['response']:
+        if raw_team['nbaFranchise'] is False:
+            continue
+        if raw_team['leagues']['standard']['division'] not in NBA_DIVISIONS:
+            # Data sanitization
+            continue
+
+        team = {}
+        team['team_id'] = raw_team['id']
+        team['team_name'] = raw_team['name']
+        team['conference'] = raw_team['leagues']['standard']['conference']
+        team['division'] = raw_team['leagues']['standard']['division']
+        teams.append(team)
+
+    file_name = f'db/teams.json'
+    with open(file_name, 'w') as file_id:
+        file_id.write(json.dumps(teams))
+
+    return file_name
+
+
 def get_games_for_season(season: int) -> str:
     """
-    Get games for season and save locally.
+    Get games for season and persist locally in a JSON file.
 
     Returns:
       The file_name used to store the games for a single season.
     """
-    url = f"{BASE_URL}games?season={season}"
+    url = f"{BASE_URL}/games?season={season}"
 
     print(f"Qualified URL: {url}")
     print(f"Headers: {HEADERS}")
@@ -92,11 +134,10 @@ def combine_games_across_seasons(filenames: List[str]):
         file_id.write(json.dumps(all_games))
 
 
-def setup_games_tables() -> None:
+def setup_games() -> None:
     """
     Setup the games table by pulling NBA data and persisting a single json file. Exists early if data already fetched.
     """
-    # Check if data is already pulled
 
     file_path = os.getcwd() + '/db/games.json'
     if os.path.exists(file_path):
@@ -108,6 +149,19 @@ def setup_games_tables() -> None:
     for season in range(START_SEASON, LAST_SEASON+1):
         files_for_seasons.append(get_games_for_season(season))
     combine_games_across_seasons(files_for_seasons)
+
+
+def setup_teams():
+    """
+    Setup the teams table by pulling NBA data and persisting a single json file. Exists early if data already fetched.
+    """
+    file_path = os.getcwd() + '/db/teams.json'
+    if os.path.exists(file_path):
+        print('Data already pulled for NBA teams. Skipping setup.')
+        return
+
+    print("Pulling data for NBA teams.")
+    get_teams()
 
 
 def main():
@@ -126,7 +180,9 @@ def main():
 
     setup_client(api_key=sys.argv[1])
 
-    setup_games_tables()
+    setup_games()
+
+    setup_teams()
 
 
 
