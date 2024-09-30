@@ -1,10 +1,16 @@
 import duckdb
 
 
-# Cache a simple mapping of team_id to team_name to better display results
+"""
+Cache the teams database because of its small size
+
+Create a simple cache of the teams table with the mapping { team_id : [ team_name, team_conference] }
+This cache allows us to display the results better, by resolving team_id to team_name, and allows us to
+simplify our SQL queries and move some processing into code
+"""
 TEAM_CACHE = {}
 
-def init_db_connection():
+def init_db_connection() -> None:
     duckdb.sql("CREATE TABLE games AS FROM 'db/games.json';")
     duckdb.sql("CREATE TABLE teams AS FROM 'db/teams.json';")
     print("Read games and teams tables into duckdb")
@@ -14,14 +20,14 @@ def cache_teams() -> None:
     """ Cache the teams so we can easily print the results throughout our program. """
     global TEAM_CACHE
 
-    sql_statement = """SELECT team_id, team_name from teams;"""
+    sql_statement = """SELECT team_id, team_name, conference from teams;"""
     response = duckdb.sql(sql_statement).fetchall()
 
     for record in response:
-        TEAM_CACHE[record[0]] = record[1]
+        TEAM_CACHE[record[0]] = (record[1], record[2])
 
 
-def basic_extraction():
+def basic_extraction() -> None:
     """ Retrieve the top 10 highest-scoring games in the last decade. """
 
     sql_statement = """
@@ -39,7 +45,7 @@ def basic_extraction():
         print(f"The #{index+1} highest-scoring game had a total score of {total_score} and game_id {game_id}")
 
 
-def win_loss_records():
+def win_loss_records() -> None:
     """ Retrieve the win loss record for each team over the last decade. """
 
     sql_statement = """
@@ -58,10 +64,11 @@ def win_loss_records():
     for team_total_for_season in response:
         games_won, season, team_id = team_total_for_season
         games_lost = 82 - games_won
-        print(f"In {season}, the team {TEAM_CACHE[team_id]} had a record of {games_won}-{games_lost}")
+        print(f"In {season}, the team {TEAM_CACHE[team_id][0]} had a record of {games_won}-{games_lost}")
 
 
-def team_performance_by_season():
+
+def team_performance_by_season() -> None:
     """ Calculate the average points scored by each team per season over the last decade. """
 
     sql_statement = """
@@ -80,8 +87,41 @@ def team_performance_by_season():
     print("Printing the average points scored by each team for the last 10 seasons")
     for record in response:
         season, team_id, average_score = record
-        print(f"In {season}, the team {TEAM_CACHE[team_id]} scored an average of {round(average_score, 2)} points per game")
+        print(f"In {season}, the team {TEAM_CACHE[team_id][0]} scored an average of {round(average_score, 2)} points per game")
 
+
+def conference_analysis() -> None:
+    """ Determine which conference has had the most wins in the last decade. """
+
+    # Generate total wins over decade for each team and then add add conference analysis in code
+    sql_statement = """
+    SELECT COUNT(game_id),
+        CASE
+            WHEN @home_score > @away_score THEN home_team
+            ELSE away_team
+        END AS winning_team
+    FROM games
+    GROUP BY winning_team;
+    """
+    response = duckdb.sql(sql_statement).fetchall()
+
+    # Add conference analysis in code with the help of our team cache
+    conference_wins = {"East": 0, "West": 0}
+    for record in response:
+        team_win_total_decade, team_id = record
+        team_conference = TEAM_CACHE[team_id][1]
+        conference_wins[team_conference] = conference_wins[team_conference] + team_win_total_decade
+
+    # Display the results
+    if conference_wins["East"] > conference_wins["West"]:
+        winner = "East"
+        loser = "West"
+    else:
+        winner = "West"
+        loser = "East"
+
+    print(f"In the last decade, the {winner} conference had more wins with {conference_wins[winner]} total wins.")
+    print(f"In the same time, the {loser} conference had less wins with {conference_wins[loser]} total wins.")
 
 
 def main():
@@ -96,7 +136,9 @@ def main():
 
     # win_loss_records()
 
-    team_performance_by_season()
+    # team_performance_by_season()
+
+    conference_analysis()
 
 
 if __name__ == '__main__':
