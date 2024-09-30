@@ -1,4 +1,7 @@
 import duckdb
+from dash import Dash, html, dcc, callback, Output, Input
+import plotly.express as px
+import plotly.graph_objs as go
 
 
 """
@@ -9,6 +12,7 @@ This cache allows us to display the results better, by resolving team_id to team
 simplify our SQL queries and move some processing into code
 """
 TEAM_CACHE = {}
+REVERSE_TEAM_CACHE = {}
 
 def init_db_connection() -> None:
     duckdb.sql("CREATE TABLE games AS FROM 'db/games.json';")
@@ -19,12 +23,15 @@ def init_db_connection() -> None:
 def cache_teams() -> None:
     """ Cache the teams so we can easily print the results throughout our program. """
     global TEAM_CACHE
+    global REVERSE_TEAM_CACHE
 
     sql_statement = """SELECT team_id, team_name, conference from teams;"""
     response = duckdb.sql(sql_statement).fetchall()
 
     for record in response:
         TEAM_CACHE[record[0]] = (record[1], record[2])
+        REVERSE_TEAM_CACHE[record[1]] = record[0]
+
 
 
 def basic_extraction() -> None:
@@ -148,7 +155,7 @@ def detailed_game_analysis() -> None:
 def analyze_team_performance_trends():
     """ Analyze the performance (avg. points scored & avg. points allowed) trends of teams over time. """
     sql_statement = """
-    SELECT season, team, AVG(points_scored), AVG(points_allowed) FROM (
+    SELECT season, team, AVG(points_scored) as average_points_scored, AVG(points_allowed) as average_points_allowed FROM (
         SELECT season, home_team as team, home_score as points_scored, away_score as points_allowed
         FROM games
         UNION ALL
@@ -166,6 +173,28 @@ def analyze_team_performance_trends():
         avg_scored = round(avg_scored, 2)
         avg_allowed = round(avg_allowed, 2)
         print(f"In the season {season} the {team_name} scored an average of {avg_scored} points per game and allowed {avg_allowed} points per game")
+
+    # Display results
+    app = Dash()
+    df = duckdb.query(sql_statement).to_df()
+    fig = go.Figure(data=[go.Scatter(x=df.season, y=[df.average_points_scored, df.average_points_allowed] )])
+    team_names = [team[0] for team in TEAM_CACHE.values()]
+    app.layout = [
+        html.H1(children='NBA Team Performance Over Time', style={'textAlign': 'center'}),
+        dcc.Dropdown(team_names, 'Los Angeles Lakers', id='dropdown-selection'),
+        dcc.Graph(id='graph-content', figure=fig)
+    ]
+
+    @callback(
+        Output('graph-content', 'figure'),
+        Input('dropdown-selection', 'value')
+    )
+    def update_graph(value):
+        team_id = REVERSE_TEAM_CACHE[value]
+        dff = df[df.team == team_id]
+        return px.line(dff, x='season', y=['average_points_allowed', 'average_points_scored'])
+
+    app.run()
 
 
 def main():
@@ -190,4 +219,4 @@ def main():
 
 
 if __name__ == '__main__':
-	main()
+    main()
