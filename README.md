@@ -22,7 +22,8 @@ To run the code, we just have a handful of dependencies that are assumed to be i
 Run the program by calling ... (TODO)
 
 ### Follow Ups
-1. Data Cleanup 
+1. Data Cleanup
  - NBA games per season is off. There should be 1230 games in a regular season, assuming 82 games per team and 30 teams. For some reason, these numbers are off.
  - NBA teams had a similar problem with a random team "Stephen A" but that was identified and removed in code.
 2. Rate Limiting - Currently fails on fetching teams because of the 10 requests/minute limit.
+3. Pretty print the team_id (add in team names and date instead of ID)

@@ -51,8 +51,6 @@ def setup_client(api_key: str) -> None:
       'x-rapidapi-key': API_KEY,
       'x-rapidapi-host': 'api-nba-v1.p.rapidapi.com'
     }
-    print("Just set the HEADERS")
-    print(HEADERS)
 
 
 def get_teams() -> str:
@@ -97,13 +95,14 @@ def get_games_for_season(season: int) -> str:
     """
     url = f"{BASE_URL}/games?season={season}"
 
-    print(f"Qualified URL: {url}")
-    print(f"Headers: {HEADERS}")
-
     response = requests.request("GET", url, headers=HEADERS, data={})
 
     games = []
     for raw_game in response.json()['response']:
+        # Only include regular season games
+        if raw_game['league'] != 'standard' or raw_game['stage'] != 2:
+            continue
+
         game = {}
         game['game_id'] = raw_game['id']
         game['season'] = raw_game['season']
@@ -138,7 +137,6 @@ def setup_games() -> None:
     """
     Setup the games table by pulling NBA data and persisting a single json file. Exists early if data already fetched.
     """
-
     file_path = os.getcwd() + '/db/games.json'
     if os.path.exists(file_path):
         print('Data already pulled for NBA games. Skipping setup.')
@@ -183,9 +181,6 @@ def main():
     setup_games()
 
     setup_teams()
-
-
-
 
 
 if __name__ == '__main__':
