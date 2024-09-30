@@ -124,6 +124,28 @@ def conference_analysis() -> None:
     print(f"In the same time, the {loser} conference had less wins with {conference_wins[loser]} total wins.")
 
 
+def detailed_game_analysis() -> None:
+    """ Find the team with the highest margin of victory in the last decade. """
+
+    sql_statement = """
+    SELECT team, AVG(margin) as average_margin FROM (
+        SELECT home_team as team, home_score-away_score AS margin
+        FROM games
+        UNION ALL
+        SELECT away_team as team, away_score-home_score AS margin
+        FROM games
+    )
+    GROUP BY team
+    ORDER BY average_margin DESC
+    LIMIT 1;
+    """
+
+    response = duckdb.sql(sql_statement).fetchall()
+    team_id, margin = response[0]
+    print(f"In the last decade, the team with the highest margin of victory is the {TEAM_CACHE[team_id][0]} with a per game margin of: {margin}")
+
+
+
 def main():
     """
     Run through some basic tasks to interact with the NBA data
@@ -138,7 +160,9 @@ def main():
 
     # team_performance_by_season()
 
-    conference_analysis()
+    # conference_analysis()
+
+    detailed_game_analysis()
 
 
 if __name__ == '__main__':
