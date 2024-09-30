@@ -145,6 +145,28 @@ def detailed_game_analysis() -> None:
     print(f"In the last decade, the team with the highest margin of victory is the {TEAM_CACHE[team_id][0]} with a per game margin of: {margin}")
 
 
+def analyze_team_performance_trends():
+    """ Analyze the performance (avg. points scored & avg. points allowed) trends of teams over time. """
+    sql_statement = """
+    SELECT season, team, AVG(points_scored), AVG(points_allowed) FROM (
+        SELECT season, home_team as team, home_score as points_scored, away_score as points_allowed
+        FROM games
+        UNION ALL
+        SELECT season, away_team as team, away_score as points_scored, home_score as points_allowed
+        FROM games
+    )
+    GROUP BY season, team
+    ORDER BY team, season;
+    """
+
+    response = duckdb.sql(sql_statement).fetchall()
+    for record in response:
+        season, team_id, avg_scored, avg_allowed = record
+        team_name = TEAM_CACHE[team_id][0]
+        avg_scored = round(avg_scored, 2)
+        avg_allowed = round(avg_allowed, 2)
+        print(f"In the season {season} the {team_name} scored an average of {avg_scored} points per game and allowed {avg_allowed} points per game")
+
 
 def main():
     """
@@ -162,7 +184,9 @@ def main():
 
     # conference_analysis()
 
-    detailed_game_analysis()
+    # detailed_game_analysis()
+
+    analyze_team_performance_trends()
 
 
 if __name__ == '__main__':
