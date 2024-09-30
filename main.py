@@ -61,6 +61,29 @@ def win_loss_records():
         print(f"In {season}, the team {TEAM_CACHE[team_id]} had a record of {games_won}-{games_lost}")
 
 
+def team_performance_by_season():
+    """ Calculate the average points scored by each team per season over the last decade. """
+
+    sql_statement = """
+    SELECT season, team, AVG(score) as average_score FROM
+        (
+            SELECT season, home_team as team, home_score as score
+            FROM games
+            UNION ALL
+            SELECT season, away_team as team, away_score as score
+            FROM games
+        ) as all_scores
+    GROUP BY team, season;
+    """
+
+    response = duckdb.sql(sql_statement).fetchall()
+    print("Printing the average points scored by each team for the last 10 seasons")
+    for record in response:
+        season, team_id, average_score = record
+        print(f"In {season}, the team {TEAM_CACHE[team_id]} scored an average of {round(average_score, 2)} points per game")
+
+
+
 def main():
     """
     Run through some basic tasks to interact with the NBA data
@@ -71,7 +94,9 @@ def main():
 
     # basic_extraction()
 
-    win_loss_records()
+    # win_loss_records()
+
+    team_performance_by_season()
 
 
 if __name__ == '__main__':
