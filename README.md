@@ -1,8 +1,18 @@
-# Overview
+## Overview
 An exploration of NBA stats
 
+## Setup
 
-# Setup
+### Install Dependencies
+There are just a few dependencies in this project so instead of creating a virtual environment, let's quickly install
+the dependencies globally. Note that we assume you have python3 and pip3 on your machine.
+```
+pip3 install requests
+pip3 install duckdb
+pip3 install dash
+pip3 install pandas
+```
+
 ### Fetch NBA Data
 We get our data from [API-NBA](https://api-sports.io/documentation/nba/v2) and use `duckdb` to spin up a local database
 
@@ -13,13 +23,14 @@ python3 setup-db.py <API_KEY>
 ```
 This script will pull NBA games and team data.
 
-
-### Other Dependencies
-To run the code, we just have a handful of dependencies that are assumed to be installed globally. We could also use a virtual environment like `pipenv` to manage these dependencies but these are widely used libraries so for simplicity, we asume they are available.
-
-
 # Usage
-Run the program by calling ... (TODO)
+Run the program by calling
+```
+python3 main.py
+```
+This will run the final task to display team performance over time and spin up a 
+local server to display the results using plotly. Navigate to the URL (http://127.0.0.1:8050) after running
+the above command to see the results visually.
 
 ### Follow Ups
 1. Data Cleanup

@@ -1,16 +1,3 @@
-"""
-Populate the 'games' table
-Use the /games endpoint and some transformations
-
-Games DB schema:
-- game_id (in API)
-- season (in API)
-- date (in API, just take start_date)
-- home_team (in API teams.home.id)
-- away_team (in API teams.visitors.id)
-- home_score (in API scores.home.points)
-- away_score (in API scores.visitors.points)
-"""
 import sys
 import os
 
